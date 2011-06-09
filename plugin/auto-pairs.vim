@@ -1,7 +1,7 @@
 " Insert or delete brackets, parens, quotes in pairs.
 " Maintainer:	JiangMiao <jiangfriend@gmail.com>
-" Last Change:  2011-06-07
-" Version: 1.0.2
+" Last Change:  2011-06-10
+" Version: 1.0.3
 " Homepage: http://www.vim.org/scripts/script.php?script_id=3599
 " Repository: https://github.com/jiangmiao/auto-pairs
 
@@ -21,6 +21,8 @@ end
 if !exists('g:AutoPairs')
   let g:AutoPairs = {'(':')', '[':']', '{':'}',"'":"'",'"':'"'}
 end
+let g:AutoExtraPairs = copy(g:AutoPairs)
+let g:AutoExtraPairs['<'] = '>'
 
 if !exists('g:AutoPairsMapBS')
   let g:AutoPairsMapBS = 1
@@ -36,6 +38,10 @@ end
 
 if !exists('g:AutoPairsShortcutToggle')
   let g:AutoPairsShortcutToggle = '<M-p>'
+end
+
+if !exists('g:AutoPairsShortcutFastWrap')
+  let g:AutoPairsShortcutFastWrap = '<M-e>'
 end
 
 let g:AutoPairsClosedPairs = {}
@@ -107,26 +113,25 @@ function! AutoPairsJump()
 endfunction
 
 " Fast wrap the word in brackets
-" Haven't finished yet
-function! AutoPairsExtend()
+function! AutoPairsFastWrap()
   let line = getline('.')
   let current_char = line[col('.')-1]
   let next_char = line[col('.')]
-
-
-  if has_key(g:AutoPairsClosedPairs, current_char)
-    if has_key(g:AutoPairs, next_char)
-      let open = next_char
-      let close = g:AutoPairs[next_char]
-      let quote_pattern = '(?:\\\|\"\|[^"])*'
-      echoe 'search pair '.open.' '.close
-      call searchpair(open, '', close, 'W')
-    end
-    execute "normal! a".current_char."\<LEFT>"
-    return ''
+  
+  normal! x
+  if match(next_char, '\s') != -1
+    call search('\S', 'W')
+    let next_char = getline('.')[col('.')-1]
   end
 
-  return ''
+  if has_key(g:AutoExtraPairs, next_char)
+    let close = g:AutoExtraPairs[next_char]
+    call search(close, 'W')
+    return "\<RIGHT>".current_char."\<LEFT>"
+  else
+    execute "normal! ea".current_char
+    return ""
+  end
 endfunction
 
 function! AutoPairsMap(key)
@@ -176,6 +181,7 @@ function! AutoPairsInit()
     execute 'inoremap <buffer> <silent> <CR> <C-R>=AutoPairsReturn()<CR>'
   end
 
+  execute 'inoremap <buffer> <silent> '.g:AutoPairsShortcutFastWrap.' <C-R>=AutoPairsFastWrap()<CR>'
   execute 'inoremap <buffer> <silent> '.g:AutoPairsShortcutToggle.' <C-R>=AutoPairsToggle()<CR>'
   execute 'noremap <buffer> <silent> '.g:AutoPairsShortcutToggle.' :call AutoPairsToggle()<CR>'
   " If the keys map conflict with your own settings, delete or change them
@@ -183,7 +189,6 @@ function! AutoPairsInit()
     execute 'inoremap <buffer> <silent> <M-n> <ESC>:call AutoPairsJump()<CR>a'
     execute 'inoremap <buffer> <silent> <M-a> <END>'
     execute 'inoremap <buffer> <silent> <M-o> <END><CR>'
-    execute 'inoremap <buffer> <silent> <M-e> <C-R>=AutoPairsExtend()<CR>'
   end
 endfunction
 

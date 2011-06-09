@@ -8,32 +8,37 @@ copy plugin/auto-pairs.vim to ~/.vim/plugin
 
 Features
 --------
-### Insert in pair
+*   Insert in pair
      
-    input: [
-    output: [|]
+        input: [
+        output: [|]
 
-### Delete in pair
+*   Delete in pair
      
-    input: foo[<BS>
-    output: foo
+        input: foo[<BS>
+        output: foo
 
-### Insert new indented line after Return
+*   Insert new indented line after Return
 
-    input: {|} (press <CR> at |)
-    output: {
-        |
-    }
+        input: {|} (press <CR> at |)
+        output: {
+            |
+        }
 
-### Skip closed bracket.
+*   Skip closed bracket.
 
-    input: []
-    output: []
+        input: []
+        output: []
 
-### Ignore auto pair when previous character is \
+*   Ignore auto pair when previous character is \
 
-    input: "\'
-    output: "\'"
+        input: "\'
+        output: "\'"
+
+*   Fast Wrap
+
+        input: |'hello' (press (<M-e> at|)
+        output: ('hello')
 
 
 Shortcuts
@@ -43,6 +48,7 @@ Shortcuts
         <CR>  : Insert new indented line after return if cursor in blank brackets or quotes.
         <BS>  : Delete brackets in pair
         <M-p> : Toggle Autopairs
+        <M-e> : Fast Wrap
 
     Optional Shortcuts:
     could be turn off by let g:AutoPairsShortcuts = 0
@@ -61,6 +67,14 @@ Options
         Default: '<M-p>'
 
         The shortcut to toggle autopairs.
+
+*   g:AutoPairsShortcutFastWrap
+       
+        Default: '<M-e>'
+
+        Fast wrap the word. all pairs will be consider as a block (include <>).
+        (|)'hello' after fast wrap at |, the word will be ('hello')
+        (|)<hello> after fast wrap at |, the word will be (<hello>)
 
 *   g:AutoPairsShortcuts 
 
