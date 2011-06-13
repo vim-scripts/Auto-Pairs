@@ -1,7 +1,7 @@
 " Insert or delete brackets, parens, quotes in pairs.
 " Maintainer:	JiangMiao <jiangfriend@gmail.com>
 " Last Change:  2011-06-10
-" Version: 1.0.3
+" Version: 1.1.0
 " Homepage: http://www.vim.org/scripts/script.php?script_id=3599
 " Repository: https://github.com/jiangmiao/auto-pairs
 
@@ -117,6 +117,11 @@ function! AutoPairsFastWrap()
   let line = getline('.')
   let current_char = line[col('.')-1]
   let next_char = line[col('.')]
+
+  " Ignore EOL
+  if col('.') == col('$')
+    return ''
+  end
   
   normal! x
   if match(next_char, '\s') != -1
@@ -129,7 +134,10 @@ function! AutoPairsFastWrap()
     call search(close, 'W')
     return "\<RIGHT>".current_char."\<LEFT>"
   else
-    execute "normal! ea".current_char
+    if match(next_char, '\w') != -1
+      execute "normal! he"
+    end
+    execute "normal! a".current_char
     return ""
   end
 endfunction
@@ -156,7 +164,7 @@ function! AutoPairsReturn()
   let cur_char = line[col('.')-1]
   if has_key(g:AutoPairs, prev_char) && g:AutoPairs[prev_char] == cur_char
     if g:AutoPairsCenterLine && winline() * 1.5 >= winheight(0)
-      let cmd = ";\<C-O>zz\<DEL>"
+      let cmd = " \<C-O>zz\<ESC>cl"
     end
     return "\<CR>\<C-O>O".cmd
   end
@@ -174,15 +182,15 @@ function! AutoPairsInit()
   endfor
 
   if g:AutoPairsMapBS
-    execute 'inoremap <buffer> <silent> <BS> <C-R>=AutoPairsDelete()<CR>'
+    execute 'inoremap <buffer> <silent> <expr> <BS> AutoPairsDelete()'
   end
 
   if g:AutoPairsMapCR
-    execute 'inoremap <buffer> <silent> <CR> <C-R>=AutoPairsReturn()<CR>'
+    execute 'inoremap <buffer> <silent> <expr> <CR> AutoPairsReturn()'
   end
 
   execute 'inoremap <buffer> <silent> '.g:AutoPairsShortcutFastWrap.' <C-R>=AutoPairsFastWrap()<CR>'
-  execute 'inoremap <buffer> <silent> '.g:AutoPairsShortcutToggle.' <C-R>=AutoPairsToggle()<CR>'
+  execute 'inoremap <buffer> <silent> <expr> '.g:AutoPairsShortcutToggle.' AutoPairsToggle()'
   execute 'noremap <buffer> <silent> '.g:AutoPairsShortcutToggle.' :call AutoPairsToggle()<CR>'
   " If the keys map conflict with your own settings, delete or change them
   if g:AutoPairsShortcuts
