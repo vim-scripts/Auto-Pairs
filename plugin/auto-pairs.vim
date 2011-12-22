@@ -1,7 +1,7 @@
 " Insert or delete brackets, parens, quotes in pairs.
 " Maintainer:	JiangMiao <jiangfriend@gmail.com>
-" Last Change:  2011-09-06
-" Version: 1.1.1
+" Last Change:  2011-12-13
+" Version: 1.1.3
 " Homepage: http://www.vim.org/scripts/script.php?script_id=3599
 " Repository: https://github.com/jiangmiao/auto-pairs
 
@@ -21,6 +21,11 @@ end
 if !exists('g:AutoPairs')
   let g:AutoPairs = {'(':')', '[':']', '{':'}',"'":"'",'"':'"'}
 end
+
+if !exists('g:AutoPairsParens')
+  let g:AutoPairsParens = {'(':')', '[':']', '{':'}'}
+end
+
 let g:AutoExtraPairs = copy(g:AutoPairs)
 let g:AutoExtraPairs['<'] = '>'
 
@@ -30,6 +35,10 @@ end
 
 if !exists('g:AutoPairsMapCR')
   let g:AutoPairsMapCR = 1
+end
+
+if !exists('g:AutoPairsMapSpace')
+  let g:AutoPairsMapSpace = 1
 end
 
 if !exists('g:AutoPairsCenterLine')
@@ -56,6 +65,7 @@ function! AutoPairsInsert(key)
   let line = getline('.')
   let prev_char = line[col('.')-2]
   let current_char = line[col('.')-1]
+  let next_char = line[col('.')]
 
   let eol = 0
   if col('$') -  col('.') <= 1
@@ -67,13 +77,29 @@ function! AutoPairsInsert(key)
     return a:key
   end
 
-  " Skip the character if current character is the same as input
-  if current_char == a:key && !has_key(g:AutoPairs, a:key)
-    return "\<Right>"
-  end
 
-  " Input directly if the key is not an open key
   if !has_key(g:AutoPairs, a:key)
+    " Skip the character if next character is space
+    if current_char == ' ' && next_char == a:key
+      return "\<Right>\<Right>"
+    end
+
+    " Skip the character if next
+    if current_char == ''
+      let next_lineno = line('.')+1
+      let next_line = getline(nextnonblank(next_lineno))
+      let next_char = matchstr(next_line, '\s*\zs.')
+      if next_char == a:key
+        return "\<ESC>e^a"
+      endif
+    endif
+
+    " Skip the character if current character is the same as input
+    if current_char == a:key
+      return "\<Right>"
+    end
+
+    " Input directly if the key is not an open key
     return a:key
   end
 
@@ -89,6 +115,7 @@ endfunction
 
 function! AutoPairsDelete()
   let line = getline('.')
+  let current_char = line[col('.')-1]
   let prev_char = line[col('.')-2]
   let pprev_char = line[col('.')-3]
 
@@ -96,7 +123,12 @@ function! AutoPairsDelete()
     return "\<BS>"
   end
 
-  if has_key(g:AutoPairs, prev_char)
+  " Delete last two spaces in parens, work with MapSpace
+  if has_key(g:AutoPairs, pprev_char) && prev_char == ' ' && current_char == ' '
+    return "\<BS>\<DEL>"
+  endif
+
+  if has_key(g:AutoPairs, prev_char) 
     let close = g:AutoPairs[prev_char]
     if match(line,'^\s*'.close, col('.')-1) != -1
       let space = matchstr(line, '^\s*', col('.')-1)
@@ -165,9 +197,27 @@ function! AutoPairsReturn()
     if g:AutoPairsCenterLine && winline() * 1.5 >= winheight(0)
       let cmd = " \<C-O>zz\<ESC>cl"
     end
-    return "\<DEL>\<CR>".cur_char."\<C-O>O".cmd
+    " conflict with javascript and coffee
+    " javascript   need   indent new line
+    " coffeescript forbid indent new line
+    if &filetype == 'coffeescript'
+      return "\<DEL>\<CR>".cur_char."\<ESC>k==o".cmd
+    else
+      return "\<DEL>\<CR>".cur_char."\<ESC>=ko".cmd
+    endif
   end
   return "\<CR>"
+endfunction
+
+function! AutoPairsSpace()
+  let line = getline('.')
+  let prev_char = line[col('.')-2]
+  let cmd = ''
+  let cur_char =line[col('.')-1]
+  if has_key(g:AutoPairsParens, prev_char) && g:AutoPairsParens[prev_char] == cur_char
+    let cmd = "\<SPACE>\<LEFT>"
+  endif
+  return "\<SPACE>".cmd
 endfunction
 
 function! AutoPairsInit()
@@ -187,6 +237,10 @@ function! AutoPairsInit()
 
   if g:AutoPairsMapCR
     execute 'inoremap <buffer> <silent> <expr> <CR> AutoPairsReturn()'
+  end
+
+  if g:AutoPairsMapSpace
+    execute 'inoremap <buffer> <silent> <expr> <space> AutoPairsSpace()'
   end
 
   execute 'inoremap <buffer> <silent> '.g:AutoPairsShortcutFastWrap.' <C-R>=AutoPairsFastWrap()<CR>'
