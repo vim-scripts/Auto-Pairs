@@ -1,7 +1,8 @@
 " Insert or delete brackets, parens, quotes in pairs.
 " Maintainer:	JiangMiao <jiangfriend@gmail.com>
-" Last Change:  2011-12-13
-" Version: 1.1.3
+" Contributor: camthompson
+" Last Change:  2012-01-17
+" Version: 1.1.4
 " Homepage: http://www.vim.org/scripts/script.php?script_id=3599
 " Repository: https://github.com/jiangmiao/auto-pairs
 
@@ -19,7 +20,7 @@ if !exists('g:AutoPairsShortcuts')
 end
 
 if !exists('g:AutoPairs')
-  let g:AutoPairs = {'(':')', '[':']', '{':'}',"'":"'",'"':'"'}
+  let g:AutoPairs = {'(':')', '[':']', '{':'}',"'":"'",'"':'"', '`':'`'}
 end
 
 if !exists('g:AutoPairsParens')
@@ -77,14 +78,13 @@ function! AutoPairsInsert(key)
     return a:key
   end
 
-
   if !has_key(g:AutoPairs, a:key)
     " Skip the character if next character is space
     if current_char == ' ' && next_char == a:key
       return "\<Right>\<Right>"
     end
 
-    " Skip the character if next
+    " Skip the character if closed pair is next character
     if current_char == ''
       let next_lineno = line('.')+1
       let next_line = getline(nextnonblank(next_lineno))
@@ -108,6 +108,22 @@ function! AutoPairsInsert(key)
 
   if current_char == close && open == close
     return "\<Right>"
+  end
+
+  " Ignore auto close ' if follows a word
+  " MUST after closed check. 'hello|'
+  if a:key == "'" && prev_char =~ '\v\w'
+    return a:key
+  end
+
+  " support for ''' ``` and """
+  if open == close
+    " The key must be ' " `
+    let pprev_char = line[col('.')-3]
+    if pprev_char == open && prev_char == open
+      " Double pair found
+      return a:key
+    end
   end
 
   return open.close."\<Left>"
