@@ -1,8 +1,8 @@
 " Insert or delete brackets, parens, quotes in pairs.
 " Maintainer:	JiangMiao <jiangfriend@gmail.com>
 " Contributor: camthompson
-" Last Change:  2012-01-24
-" Version: 1.1.5
+" Last Change:  2012-03-22
+" Version: 1.1.6
 " Homepage: http://www.vim.org/scripts/script.php?script_id=3599
 " Repository: https://github.com/jiangmiao/auto-pairs
 
@@ -53,6 +53,10 @@ end
 if !exists('g:AutoPairsShortcutFastWrap')
   let g:AutoPairsShortcutFastWrap = '<M-e>'
 end
+
+if !exists('g:AutoPairsShortcutJump')
+  let g:AutoPairsShortcutJump = '<M-n>'
+endif
 
 let g:AutoPairsClosedPairs = {}
 
@@ -162,7 +166,7 @@ function! AutoPairsDelete()
 endfunction
 
 function! AutoPairsJump()
-  call search('[{("\[\]'')}]','W')
+  call search('["\]'')}]','W')
 endfunction
 
 " Fast wrap the word in brackets
@@ -196,7 +200,8 @@ function! AutoPairsFastWrap()
 endfunction
 
 function! AutoPairsMap(key)
-    execute 'inoremap <buffer> <silent> '.a:key.' <C-R>=AutoPairsInsert("\'.a:key.'")<CR>'
+  let escaped_key = substitute(a:key, "'", "''", 'g')
+  execute 'inoremap <buffer> <silent> '.a:key." <C-R>=AutoPairsInsert('".escaped_key."')<CR>"
 endfunction
 
 function! AutoPairsToggle()
@@ -265,16 +270,21 @@ function! AutoPairsInit()
     execute 'inoremap <buffer> <silent> <expr> <SPACE> AutoPairsSpace()'
   end
 
-  execute 'inoremap <buffer> <silent> '.g:AutoPairsShortcutFastWrap.' <C-R>=AutoPairsFastWrap()<CR>'
-  " use <expr> to ensure showing the status when toggle
-  execute 'inoremap <buffer> <silent> <expr> '.g:AutoPairsShortcutToggle.' AutoPairsToggle()'
-  execute 'noremap <buffer> <silent> '.g:AutoPairsShortcutToggle.' :call AutoPairsToggle()<CR>'
-  " If the keys map conflict with your own settings, delete or change them
-  if g:AutoPairsShortcuts
-    execute 'inoremap <buffer> <silent> <M-n> <ESC>:call AutoPairsJump()<CR>a'
-    execute 'inoremap <buffer> <silent> <M-a> <END>'
-    execute 'inoremap <buffer> <silent> <M-o> <END><CR>'
+  if g:AutoPairsShortcutFastWrap != ''
+    execute 'inoremap <buffer> <silent> '.g:AutoPairsShortcutFastWrap.' <C-R>=AutoPairsFastWrap()<CR>'
   end
+
+  if g:AutoPairsShortcutToggle != ''
+    " use <expr> to ensure showing the status when toggle
+    execute 'inoremap <buffer> <silent> <expr> '.g:AutoPairsShortcutToggle.' AutoPairsToggle()'
+    execute 'noremap <buffer> <silent> '.g:AutoPairsShortcutToggle.' :call AutoPairsToggle()<CR>'
+  end
+
+  if g:AutoPairsShortcutJump != ''
+    execute 'inoremap <buffer> <silent> ' . g:AutoPairsShortcutJump. ' <ESC>:call AutoPairsJump()<CR>a'
+    execute 'noremap <buffer> <silent> ' . g:AutoPairsShortcutJump. ' :call AutoPairsJump()<CR>'
+  end
+
 endfunction
 
 function! AutoPairsForceInit()
@@ -285,6 +295,8 @@ function! AutoPairsForceInit()
   endif
 endfunction
 
+" Always silent the command
+inoremap <silent> <SID>AutoPairsReturn <C-R>=AutoPairsReturn()<CR>
 
 " Global keys mapping
 " comptible with other plugin
@@ -295,7 +307,7 @@ if g:AutoPairsMapCR
   endif
 
   if old_cr !~ 'AutoPairsReturn'
-    execute 'imap <silent> <CR> '.old_cr.'<C-R>=AutoPairsReturn()<CR>'
+    execute 'imap <CR> '.old_cr.'<SID>AutoPairsReturn'
   end
 endif
 
