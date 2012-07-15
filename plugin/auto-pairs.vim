@@ -1,8 +1,8 @@
 " Insert or delete brackets, parens, quotes in pairs.
 " Maintainer:	JiangMiao <jiangfriend@gmail.com>
 " Contributor: camthompson
-" Last Change:  2012-05-16
-" Version: 1.2.2
+" Last Change:  2012-07-15
+" Version: 1.2.3
 " Homepage: http://www.vim.org/scripts/script.php?script_id=3599
 " Repository: https://github.com/jiangmiao/auto-pairs
 
@@ -184,34 +184,62 @@ endfunction
 function! AutoPairsJump()
   call search('["\]'')}]','W')
 endfunction
+" string_chunk cannot use standalone
+let s:string_chunk = '\v%(\\\_.|[^\1]|[\r\n]){-}'
+let s:ss_pattern = '\v''' . s:string_chunk . ''''
+let s:ds_pattern = '\v"'  . s:string_chunk . '"'
+
+func! s:RegexpQuote(str)
+  return substitute(a:str, '\v[\[\{\(\<\>\)\}\]]', '\\&', 'g')
+endf
+
+func! s:RegexpQuoteInSquare(str)
+  return substitute(a:str, '\v[\[\]]', '\\&', 'g')
+endf
+
+" Search next open or close pair
+func! s:FormatChunk(open, close)
+  let open = s:RegexpQuote(a:open)
+  let close = s:RegexpQuote(a:close)
+  let open2 = s:RegexpQuoteInSquare(a:open)
+  let close2 = s:RegexpQuoteInSquare(a:close)
+  if open == close
+    return '\v'.open.s:string_chunk.close
+  else
+    return '\v%(' . s:ss_pattern . '|' . s:ds_pattern . '|' . '[^'.open2.close2.']|[\r\n]' . '){-}(['.open2.close2.'])'
+  end
+endf
 
 " Fast wrap the word in brackets
 function! AutoPairsFastWrap()
   let line = getline('.')
   let current_char = line[col('.')-1]
   let next_char = line[col('.')]
-
-  " Ignore EOL
-  if col('.') == col('$')
-    return ''
-  end
-  
-  normal! x
-  if next_char =~ '\s'
-    call search('\S', 'W')
-    let next_char = getline('.')[col('.')-1]
+  let open_pair_pattern = '\v[({\[''"]'
+  let at_end = col('.') >= col('$') - 1
+  normal x
+  " Skip blank
+  if next_char =~ '\v\s' || at_end
+    call search('\v\S', 'W')
+    let line = getline('.')
+    let next_char = line[col('.')-1]
   end
 
-  if has_key(g:AutoExtraPairs, next_char)
-    let close = g:AutoExtraPairs[next_char]
-    call search(close, 'W')
-    return "\<RIGHT>".current_char."\<LEFT>"
-  else
-    if next_char =~ '\w'
-      execute "normal! he"
+  if has_key(g:AutoPairs, next_char)
+    let followed_open_pair = next_char
+    let inputed_close_pair = current_char
+    let followed_close_pair = g:AutoPairs[next_char]
+    if followed_close_pair != followed_open_pair
+      " TODO replace system searchpair to skip string and nested pair.
+      " eg: (|){"hello}world"} will transform to ({"hello})world"}
+      call searchpair('\V'.followed_open_pair, '', '\V'.followed_close_pair, 'W')
+    else
+      call search(s:FormatChunk(followed_open_pair, followed_close_pair), 'We')
     end
-    execute "normal! a".current_char
-    return ""
+    return "\<RIGHT>".inputed_close_pair."\<LEFT>"
+  else
+    normal e
+    return "\<RIGHT>".current_char."\<LEFT>"
   end
 endfunction
 
@@ -352,11 +380,20 @@ function! AutoPairsForceInit()
       let old_cr = s:ExpandMap(old_cr)
     endif
 
+    " compatible with clang_complete
+    " https://github.com/jiangmiao/auto-pairs/issues/18
+    let pattern = '<SNR>\d\+_HandlePossibleSelectionEnter()'
+    if old_cr =~ pattern
+      execute 'imap <expr> <script> <SID>AutoPairsClangCompleteCR ' . matchstr(old_cr, pattern)
+      let old_cr = substitute(old_cr, pattern , '<SID>AutoPairsClangCompleteCR', '')
+    endif
+
     if old_cr !~ 'AutoPairsReturn'
       " generally speaking, <silent> should not be here because every plugin
       " has there own silent solution. but for some plugin which wasn't double silent 
       " mapping, when maparg expand the map will lose the silent info, so <silent> always.
-      execute 'imap <buffer> <silent> <CR> '.old_cr.'<SID>AutoPairsReturn'
+      " use inoremap for neocomplcache
+      execute 'inoremap <script> <buffer> <silent> <CR> '.old_cr.'<SID>AutoPairsReturn'
     end
   endif
   call AutoPairsInit()
