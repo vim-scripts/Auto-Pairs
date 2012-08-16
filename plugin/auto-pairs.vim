@@ -1,8 +1,8 @@
 " Insert or delete brackets, parens, quotes in pairs.
 " Maintainer:	JiangMiao <jiangfriend@gmail.com>
 " Contributor: camthompson
-" Last Change:  2012-07-15
-" Version: 1.2.3
+" Last Change:  2012-08-17
+" Version: 1.2.4
 " Homepage: http://www.vim.org/scripts/script.php?script_id=3599
 " Repository: https://github.com/jiangmiao/auto-pairs
 
@@ -267,8 +267,8 @@ function! AutoPairsReturn()
   let cmd = ''
   let cur_char = line[col('.')-1]
   if has_key(g:AutoPairs, prev_char) && g:AutoPairs[prev_char] == cur_char
-    if g:AutoPairsCenterLine && winline() * 1.5 >= winheight(0)
-      let cmd = " \<C-O>zz\<ESC>cl"
+    if g:AutoPairsCenterLine && winline() * 3 >= winheight(0) * 2
+      let cmd = " \<C-O>zz\<BS>"
     end
     " conflict with javascript and coffee
     " javascript   need   indent new line
