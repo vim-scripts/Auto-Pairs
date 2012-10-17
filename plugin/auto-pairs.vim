@@ -1,8 +1,8 @@
 " Insert or delete brackets, parens, quotes in pairs.
 " Maintainer:	JiangMiao <jiangfriend@gmail.com>
 " Contributor: camthompson
-" Last Change:  2012-09-15
-" Version: 1.2.5
+" Last Change:  2012-10-17
+" Version: 1.2.6
 " Homepage: http://www.vim.org/scripts/script.php?script_id=3599
 " Repository: https://github.com/jiangmiao/auto-pairs
 
@@ -72,9 +72,12 @@ function! AutoPairsInsert(key)
   end
 
   let line = getline('.')
-  let prev_char = line[col('.')-2]
-  let current_char = line[col('.')-1]
-  let next_char = line[col('.')]
+  let pos = col('.') - 1
+  let next_chars = split(strpart(line, pos), '\zs')
+  let current_char = get(next_chars, 0, '')
+  let next_char = get(next_chars, 1, '')
+  let prev_chars = split(strpart(line, 0, pos), '\zs')
+  let prev_char = get(prev_chars, -1, '')
 
   let eol = 0
   if col('$') -  col('.') <= 1
@@ -151,9 +154,11 @@ endfunction
 
 function! AutoPairsDelete()
   let line = getline('.')
-  let current_char = line[col('.')-1]
-  let prev_char = line[col('.')-2]
-  let pprev_char = line[col('.')-3]
+  let pos = col('.') - 1
+  let current_char = get(split(strpart(line, pos), '\zs'), 0, '')
+  let prev_chars = split(strpart(line, 0, pos), '\zs')
+  let prev_char = get(prev_chars, -1, '')
+  let pprev_char = get(prev_chars, -2, '')
 
   if pprev_char == '\'
     return "\<BS>"
