@@ -1,8 +1,8 @@
 " Insert or delete brackets, parens, quotes in pairs.
 " Maintainer:	JiangMiao <jiangfriend@gmail.com>
 " Contributor: camthompson
-" Last Change:  2012-10-17
-" Version: 1.2.6
+" Last Change:  2012-11-02
+" Version: 1.2.7
 " Homepage: http://www.vim.org/scripts/script.php?script_id=3599
 " Repository: https://github.com/jiangmiao/auto-pairs
 
@@ -281,6 +281,13 @@ function! AutoPairsReturn()
       " Use \<DEL> is a bit wierd. the character before cursor need to be deleted.
       let cmd = " \<C-O>zz\<ESC>cl"
     end
+
+    " If equalprg has been set, then avoid call =
+    " https://github.com/jiangmiao/auto-pairs/issues/24
+    if &equalprg != ''
+      return "\<ESC>O".cmd
+    endif
+
     " conflict with javascript and coffee
     " javascript   need   indent new line
     " coffeescript forbid indent new line
