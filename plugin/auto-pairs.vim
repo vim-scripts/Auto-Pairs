@@ -1,8 +1,8 @@
 " Insert or delete brackets, parens, quotes in pairs.
 " Maintainer:	JiangMiao <jiangfriend@gmail.com>
 " Contributor: camthompson
-" Last Change:  2012-11-02
-" Version: 1.2.7
+" Last Change:  2012-12-18
+" Version: 1.2.8
 " Homepage: http://www.vim.org/scripts/script.php?script_id=3599
 " Repository: https://github.com/jiangmiao/auto-pairs
 
@@ -153,6 +153,10 @@ function! AutoPairsInsert(key)
 endfunction
 
 function! AutoPairsDelete()
+  if !b:autopairs_enabled
+    return "\<BS>"
+  end
+
   let line = getline('.')
   let pos = col('.') - 1
   let current_char = get(split(strpart(line, pos), '\zs'), 0, '')
@@ -174,7 +178,7 @@ function! AutoPairsDelete()
     if match(line,'^\s*'.close, col('.')-1) != -1
       let space = matchstr(line, '^\s*', col('.')-1)
       return "\<BS>". repeat("\<DEL>", len(space)+1)
-    else
+    elseif match(line, '^\s*$', col('.')-1) != -1
       let nline = getline(line('.')+1)
       if nline =~ '^\s*'.close
         let space = matchstr(nline, '^\s*')

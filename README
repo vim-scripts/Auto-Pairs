@@ -57,8 +57,15 @@ Features
 
 *   Fast Wrap
 
-        input: |'hello' (press (<M-e> at|)
+        input: |'hello' (press (<M-e> at |)
         output: ('hello')
+
+        wrap string, only support c style string
+        input: |'h\\el&#039lo' (press (<M-e> at |)
+        output ('h\\ello&#039')
+
+        input: |[foo, bar()] (press (<M-e> at |)
+        output: ([foo, bar()])
 
 *   Quick jump to closed pair.
 
@@ -151,6 +158,12 @@ Options
 
         Default: {'(':')', '[':']', '{':'}',"'":"'",'"':'"', '`':'`'}
 
+*   b:AutoPairs
+
+        Default: g:AutoPairs
+
+        Buffer level pairs set.
+
 *   g:AutoPairsShortcutToggle
 
         Default: '<M-p>'
@@ -211,6 +224,16 @@ Options
 
         Work with FlyMode, insert the key at the Fly Mode jumped postion
 
+Buffer Level Pairs Setting
+--------------------------
+
+Set b:AutoPairs before BufEnter
+
+eg:
+
+    " When the filetype is FILETYPE then make AutoPairs only match for parenthesis
+    au Filetype FILETYPE let b:AutoPairs = {"(": ")"}
+
 TroubleShooting
 ---------------
     The script will remap keys ([{'"}]) <BS>,
@@ -229,4 +252,54 @@ TroubleShooting
     2. use Alt-P to turn off the plugin.
 
     3. use DEL or <C-O>x to delete the character insert by plugin.
+
+
+Known Issues
+-----------------------
+There are the issues I cannot fix.
+
+Compatible with Vimwiki - [issue #19](https://github.com/jiangmiao/auto-pairs/issues/19)
+
+    Description: When works with vimwiki `<CR>` will output `<SNR>xx_CR()`
+    Reason: vimwiki uses `<expr>` on mapping `<CR>` that auto-pairs cannot expanding.
+    Solution A: Add
+    
+        " Copy from vimwiki.vim s:CR function for CR remapping
+        function! VimwikiCR()
+          let res = vimwiki#lst#kbd_cr()
+          if res == "\<CR>" && g:vimwiki_table_mappings
+            let res = vimwiki#tbl#kbd_cr()
+          endif
+          return res
+        endfunction
+        autocmd filetype vimwiki inoremap <buffer> <silent> <CR> <C-R>=VimwikiCR()<CR><C-R>=AutoPairsReturn()<CR>
+    
+    to .vimrc, it will make vimwiki and auto-pairs 'Return' feature works together.
+
+    Solution B: add `let g:AutoPairsMapCR = 0` to .vimrc to disable `<CR>` mapping.
+    
+Compatible with viki - [issue #25](https://github.com/jiangmiao/auto-pairs/issues/25)
+    
+    Description: When works with viki `<CR>` will output viki#ExprMarkInexistentInElement('ParagraphVisible','<CR>')
+    Reason: viki uses `<expr>` on mapping `<CR>` that auto-pairs cannot expanding.
+    Solution A: Add 
+    
+        autocmd filetype viki inoremap <buffer> <silent> <CR> <C-R>=viki#ExprMarkInexistentInElement('ParagraphVisible',"\n")<CR><C-R>=AutoPairsReturn()<CR>` 
+        
+    to .vimrc, it will make viki and auto-pairs works together.
+    
+    Solution B: add `let g:AutoPairsMapCR = 0` to .vimrc to disable `<CR>` mapping.
+    
+    Remarks: Solution A need NOT add `let g:AutoPairsMapCR = 0` to .vimrc, if Solution A still cannot work, then have to use Solution B to disable auto-pairs `<CR>`.
+
+Breaks '.' - [issue #3](https://github.com/jiangmiao/auto-pairs/issues/3)
+
+    Description: After entering insert mode and inputing `[hello` then leave insert
+                 mode by `<ESC>`. press '.' will insert 'hello' instead of '[hello]'.
+    Reason: `[` actually equals `[]\<LEFT>` and \<LEFT> will break '.'
+    Solution: none
+
+Contributors
+------------
+* [camthompson](https://github.com/camthompson)
 
