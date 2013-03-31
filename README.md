@@ -6,6 +6,10 @@ Installation
 ------------
 copy plugin/auto-pairs.vim to ~/.vim/plugin
 
+or if you are using `pathogen`:
+
+```git clone git://github.com/jiangmiao/auto-pairs.git ~/.vim/bundle/auto-pairs```
+
 Features
 --------
 *   Insert in pair
@@ -129,7 +133,7 @@ Fly Mode
 --------
 Fly Mode will always force closed-pair jumping instead of inserting. only for ")", "}", "]"
 
-If jumps in mistake, could use AutoPairsBackInsert(Default Key: <M-b>) to jump back and insert closed pair.
+If jumps in mistake, could use AutoPairsBackInsert(Default Key: `<M-b>`) to jump back and insert closed pair.
 
 the most situation maybe want to insert single closed pair in the string, eg ")"
 
@@ -151,13 +155,13 @@ Shortcuts
         <M-p> : Toggle Autopairs (g:AutoPairsShortcutToggle)
         <M-e> : Fast Wrap (g:AutoPairsShortcutFastWrap)
         <M-n> : Jump to next closed pair (g:AutoPairsShortcutJump)
-        <M-b> : BackInsert
+        <M-b> : BackInsert (g:AutoPairsShortcutBackInsert)
 
     If <M-p> <M-e> or <M-n> conflict with another keys or want to bind to another keys, add
 
         let g:AutoPairShortcutToggle = '<another key>'
 
-    to .vimrc, it the key is empty string '', then the shortcut will be disabled.
+    to .vimrc, if the key is empty string '', then the shortcut will be disabled.
 
 Options
 -------
@@ -265,40 +269,6 @@ Known Issues
 -----------------------
 There are the issues I cannot fix.
 
-Compatible with Vimwiki - [issue #19](https://github.com/jiangmiao/auto-pairs/issues/19)
-
-    Description: When works with vimwiki `<CR>` will output `<SNR>xx_CR()`
-    Reason: vimwiki uses `<expr>` on mapping `<CR>` that auto-pairs cannot expanding.
-    Solution A: Add
-
-        " Copy from vimwiki.vim s:CR function for CR remapping
-        function! VimwikiCR()
-          let res = vimwiki#lst#kbd_cr()
-          if res == "\<CR>" && g:vimwiki_table_mappings
-            let res = vimwiki#tbl#kbd_cr()
-          endif
-          return res
-        endfunction
-        autocmd filetype vimwiki inoremap <buffer> <silent> <CR> <C-R>=VimwikiCR()<CR><C-R>=AutoPairsReturn()<CR>
-
-    to .vimrc, it will make vimwiki and auto-pairs 'Return' feature works together.
-
-    Solution B: add `let g:AutoPairsMapCR = 0` to .vimrc to disable `<CR>` mapping.
-
-Compatible with viki - [issue #25](https://github.com/jiangmiao/auto-pairs/issues/25)
-
-    Description: When works with viki `<CR>` will output viki#ExprMarkInexistentInElement('ParagraphVisible','<CR>')
-    Reason: viki uses `<expr>` on mapping `<CR>` that auto-pairs cannot expanding.
-    Solution A: Add
-
-        autocmd filetype viki inoremap <buffer> <silent> <CR> <C-R>=viki#ExprMarkInexistentInElement('ParagraphVisible',"\n")<CR><C-R>=AutoPairsReturn()<CR>`
-
-    to .vimrc, it will make viki and auto-pairs works together.
-
-    Solution B: add `let g:AutoPairsMapCR = 0` to .vimrc to disable `<CR>` mapping.
-
-    Remarks: Solution A need NOT add `let g:AutoPairsMapCR = 0` to .vimrc, if Solution A still cannot work, then have to use Solution B to disable auto-pairs `<CR>`.
-
 Breaks '.' - [issue #3](https://github.com/jiangmiao/auto-pairs/issues/3)
 
     Description: After entering insert mode and inputing `[hello` then leave insert
@@ -310,3 +280,14 @@ Contributors
 ------------
 * [camthompson](https://github.com/camthompson)
 
+
+License
+-------
+
+Copyright (C) 2011-2013 Miao Jiang
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

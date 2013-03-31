@@ -1,10 +1,11 @@
 " Insert or delete brackets, parens, quotes in pairs.
 " Maintainer:	JiangMiao <jiangfriend@gmail.com>
 " Contributor: camthompson
-" Last Change:  2013-02-16
-" Version: 1.3.0
+" Last Change:  2013-04-01
+" Version: 1.3.1
 " Homepage: http://www.vim.org/scripts/script.php?script_id=3599
 " Repository: https://github.com/jiangmiao/auto-pairs
+" License: MIT
 
 if exists('g:AutoPairsLoaded') || &cp
   finish
@@ -58,6 +59,10 @@ if !exists('g:AutoPairsShortcutBackInsert')
   let g:AutoPairsShortcutBackInsert = '<M-b>'
 endif
 
+if !exists('g:AutoPairsSmartQuotes')
+  let g:AutoPairsSmartQuotes = 1
+endif
+
 
 " Will auto generated {']' => '[', ..., '}' => '{'}in initialize.
 let g:AutoPairsClosedPairs = {}
@@ -70,10 +75,12 @@ function! AutoPairsInsert(key)
 
   let line = getline('.')
   let pos = col('.') - 1
-  let next_chars = split(strpart(line, pos), '\zs')
+  let before = strpart(line, 0, pos)
+  let after = strpart(line, pos)
+  let next_chars = split(after, '\zs')
   let current_char = get(next_chars, 0, '')
   let next_char = get(next_chars, 1, '')
-  let prev_chars = split(strpart(line, 0, pos), '\zs')
+  let prev_chars = split(before, '\zs')
   let prev_char = get(prev_chars, -1, '')
 
   let eol = 0
@@ -119,7 +126,7 @@ function! AutoPairsInsert(key)
       endif
     endif
 
-    " Input directly if the key is not an open key
+    " Insert directly if the key is not an open key
     return a:key
   end
 
@@ -145,6 +152,37 @@ function! AutoPairsInsert(key)
       return repeat(a:key, 4) . repeat("\<LEFT>", 3)
     end
   end
+
+  let quotes_num = 0
+  " Ignore comment line for vim file
+  if &filetype == 'vim' && a:key == '"'
+    if before =~ '^\s*$'
+      return a:key
+    end
+    if before =~ '^\s*"'
+      let quotes_num = -1
+    end
+  end
+
+  " Keep quote number is odd.
+  " Because quotes should be matched in the same line in most of situation
+  if g:AutoPairsSmartQuotes && open == close
+    " Remove \\ \" \'
+    let cleaned_line = substitute(line, '\v(\\.)', '', 'g')
+    let n = quotes_num
+    let pos = 0
+    while 1
+      let pos = stridx(cleaned_line, open, pos)
+      if pos == -1
+        break
+      end
+      let n = n + 1
+      let pos = pos + 1
+    endwhile
+    if n % 2 == 1
+      return a:key
+    endif
+  endif
 
   return open.close."\<Left>"
 endfunction
@@ -201,6 +239,11 @@ function! AutoPairsDelete()
       " Delete (|__\n___)
       let nline = getline(line('.')+1)
       if nline =~ '^\s*'.close
+        if &filetype == 'vim' && prev_char == '"'
+          " Keep next line's comment
+          return "\<BS>"
+        end
+
         let space = matchstr(nline, '^\s*')
         return "\<BS>\<DEL>". repeat("\<DEL>", len(space)+1)
       end
@@ -267,15 +310,20 @@ function! AutoPairsFastWrap()
     end
     return "\<RIGHT>".inputed_close_pair."\<LEFT>"
   else
-    normal e
+    normal he
     return "\<RIGHT>".current_char."\<LEFT>"
   end
 endfunction
 
 function! AutoPairsMap(key)
-  let escaped_key = substitute(a:key, "'", "''", 'g')
+  " | is special key which separate map command from text
+  let key = a:key
+  if key == '|'
+    let key = '<BAR>'
+  end
+  let escaped_key = substitute(key, "'", "''", 'g')
   " use expr will cause search() doesn't work
-  execute 'inoremap <buffer> <silent> '.a:key." <C-R>=AutoPairsInsert('".escaped_key."')<CR>"
+  execute 'inoremap <buffer> <silent> '.key." <C-R>=AutoPairsInsert('".escaped_key."')<CR>"
 endfunction
 
 function! AutoPairsToggle()
@@ -396,9 +444,7 @@ endfunction
 
 function! s:ExpandMap(map)
   let map = a:map
-  if map =~ '<Plug>'
-    let map = substitute(map, '\(<Plug>\w\+\)', '\=maparg(submatch(1), "i")', 'g')
-  endif
+  let map = substitute(map, '\(<Plug>\w\+\)', '\=maparg(submatch(1), "i")', 'g')
   return map
 endfunction
 
@@ -421,26 +467,43 @@ function! AutoPairsTryInit()
   " Buffer level keys mapping
   " comptible with other plugin
   if g:AutoPairsMapCR
-    let old_cr = maparg('<CR>', 'i')
-    if old_cr == ''
-      let old_cr = '<CR>'
+    if v:version >= 703 && has('patch32')
+      " VIM 7.3 supports advancer maparg which could get <expr> info
+      " then auto-pairs could remap <CR> in any case.
+      let info = maparg('<CR>', 'i', 0, 1)
+      if empty(info)
+        let old_cr = '<CR>'
+        let is_expr = 0
+      else
+        let old_cr = info['rhs']
+        let old_cr = s:ExpandMap(old_cr)
+        let old_cr = substitute(old_cr, '<SID>', '<SNR>' . info['sid'] . '_', 'g')
+        let is_expr = info['expr']
+        let wrapper_name = '<SID>AutoPairsOldCRWrapper73'
+      endif
     else
-      let old_cr = s:ExpandMap(old_cr)
-    endif
-
-    " compatible with clang_complete
-    " https://github.com/jiangmiao/auto-pairs/issues/18
-    let pattern = '<SNR>\d\+_HandlePossibleSelectionEnter()'
-    if old_cr =~ pattern
-      execute 'imap <expr> <script> <SID>AutoPairsClangCompleteCR ' . matchstr(old_cr, pattern)
-      let old_cr = substitute(old_cr, pattern , '<SID>AutoPairsClangCompleteCR', '')
-    endif
+      " VIM version less than 7.3
+      " the mapping's <expr> info is lost, so guess it is expr or not, it's
+      " not accurate.
+      let old_cr = maparg('<CR>', 'i')
+      if old_cr == ''
+        let old_cr = '<CR>'
+        let is_expr = 0
+      else
+        let old_cr = s:ExpandMap(old_cr)
+        " old_cr contain (, I guess the old cr is in expr mode
+        let is_expr = old_cr  =~ '\V(' && toupper(old_cr) !~ '\V<C-R>'
+        let wrapper_name = '<SID>AutoPairsOldCRWrapper'
+      end
+    end
 
     if old_cr !~ 'AutoPairsReturn'
-      " generally speaking, <silent> should not be here because every plugin
-      " has there own silent solution. but for some plugin which wasn't double silent 
-      " mapping, when maparg expand the map will lose the silent info, so <silent> always.
-      " use inoremap for neocomplcache
+      if is_expr
+        " remap <expr> to `name` to avoid mix expr and non-expr mode
+        execute 'inoremap <buffer> <expr> <script> '. wrapper_name . ' ' . old_cr
+        let old_cr = wrapper_name
+      end
+      " Alawys slient mapping
       execute 'inoremap <script> <buffer> <silent> <CR> '.old_cr.'<SID>AutoPairsReturn'
     end
   endif
