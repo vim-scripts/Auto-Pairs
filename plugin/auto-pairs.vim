@@ -1,8 +1,8 @@
 " Insert or delete brackets, parens, quotes in pairs.
 " Maintainer:	JiangMiao <jiangfriend@gmail.com>
 " Contributor: camthompson
-" Last Change:  2013-04-01
-" Version: 1.3.1
+" Last Change:  2013-07-13
+" Version: 1.3.2
 " Homepage: http://www.vim.org/scripts/script.php?script_id=3599
 " Repository: https://github.com/jiangmiao/auto-pairs
 " License: MIT
@@ -415,10 +415,16 @@ function! AutoPairsInit()
   if g:AutoPairsMapBS
     " Use <C-R> instead of <expr> for issue #14 sometimes press BS output strange words
     execute 'inoremap <buffer> <silent> <BS> <C-R>=AutoPairsDelete()<CR>'
+    execute 'inoremap <buffer> <silent> <C-H> <C-R>=AutoPairsDelete()<CR>'
   end
 
   if g:AutoPairsMapSpace
-    execute 'inoremap <buffer> <silent> <SPACE> <C-R>=AutoPairsSpace()<CR>'
+    " Try to respect abbreviations on a <SPACE>
+    let do_abbrev = ""
+    if v:version >= 703 && has("patch489")
+      let do_abbrev = "<C-]>"
+    endif
+    execute 'inoremap <buffer> <silent> <SPACE> '.do_abbrev.'<C-R>=AutoPairsSpace()<CR>'
   end
 
   if g:AutoPairsShortcutFastWrap != ''
@@ -503,7 +509,7 @@ function! AutoPairsTryInit()
         execute 'inoremap <buffer> <expr> <script> '. wrapper_name . ' ' . old_cr
         let old_cr = wrapper_name
       end
-      " Alawys slient mapping
+      " Always silent mapping
       execute 'inoremap <script> <buffer> <silent> <CR> '.old_cr.'<SID>AutoPairsReturn'
     end
   endif
